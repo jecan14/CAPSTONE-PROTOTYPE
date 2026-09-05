@@ -241,6 +241,7 @@ export default function FacultyProfile({ currentUser, onLogout }) {
     <main className="main-content" ref={containerRef}>
       {/* Profile Header */}
       <div className="faculty-profile-header-card">
+<<<<<<< HEAD
         <div
           className="faculty-avatar-large"
           style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
@@ -257,6 +258,10 @@ export default function FacultyProfile({ currentUser, onLogout }) {
               {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'FM'}
             </span>
           )}
+=======
+        <div className="faculty-avatar-large">
+          {(user?.name || 'Prof. Maria Santos').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'FM'}
+>>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
         </div>
         <div className="faculty-profile-info">
           <div className="faculty-profile-name">{user.name}</div>

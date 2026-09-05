@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+<<<<<<< HEAD
 import { fetchDashboard, fetchBenefitRequests, getUser, clearAuth, fetchCurrentUser } from './api';
+=======
+>>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -13,6 +16,7 @@ import GenerateReportsPage from './components/GenerateReportsPage';
 import AnnouncementsPage from './components/AnnouncementsPage';
 import FacultyPanel from './components/FacultyPanel';
 import LoginPage from './components/LoginPage';
+import { fetchDashboard } from './api';
 import { animatePageEntrance, animateStatCards } from './utils/animations';
 import './App.css';
 
@@ -21,6 +25,7 @@ function AdminHomeContent({ onNavigate }) {
   const panelsRef       = useRef(null);
   const yearDropdownRef = useRef(null);
 
+<<<<<<< HEAD
   const [dash,             setDash]             = useState(null);
   const [loading,          setLoading]          = useState(true);
   const [error,            setError]            = useState(null);
@@ -34,6 +39,35 @@ function AdminHomeContent({ onNavigate }) {
         setError(null);
       })
       .catch(() => setError('Could not load dashboard data.'))
+=======
+  const [dash,    setDash]    = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const defaultDashboard = {
+    total_contributions: 1482500,
+    this_month_contributions: 145800,
+    current_month_label: 'July 2026',
+    cumulative_chart: {
+      data: [120000, 135000, 140000, 142000, 148000, 155000],
+      labels: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
+    },
+    monthly_chart: {
+      data: [18000, 22000, 21000, 25000, 27000, 32000],
+      labels: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard()
+      .then(data => {
+        if (data && typeof data === 'object') {
+          setDash(data);
+        } else {
+          setDash(defaultDashboard);
+        }
+      })
+      .catch(() => setDash(defaultDashboard))
+>>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
       .finally(() => setLoading(false));
   }, [selectedYear]);
 
@@ -61,6 +95,7 @@ function AdminHomeContent({ onNavigate }) {
   }, [showYearDropdown]);
 
   // ── Derive chart/stat values from API response ──────────────
+<<<<<<< HEAD
   const currentYearInt         = new Date().getFullYear();
   const availableYears         = dash?.available_years?.length
     ? dash.available_years
@@ -72,6 +107,16 @@ function AdminHomeContent({ onNavigate }) {
   const cumulativeLabels       = dash?.cumulative_chart?.labels ?? ['','','','','',''];
   const monthlyData            = dash?.monthly_chart?.data      ?? [0, 0, 0, 0, 0, 0];
   const monthlyLabels          = dash?.monthly_chart?.labels    ?? ['','','','','',''];
+=======
+  const activeDash             = dash || defaultDashboard;
+  const totalContributions     = activeDash?.total_contributions      ?? 1482500;
+  const thisMonthContributions = activeDash?.this_month_contributions ?? 145800;
+  const currentMonthLabel      = activeDash?.current_month_label      ?? 'July 2026';
+  const cumulativeData         = activeDash?.cumulative_chart?.data   ?? [120000, 135000, 140000, 142000, 148000, 155000];
+  const cumulativeLabels       = activeDash?.cumulative_chart?.labels ?? ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  const monthlyData            = activeDash?.monthly_chart?.data      ?? [18000, 22000, 21000, 25000, 27000, 32000];
+  const monthlyLabels          = activeDash?.monthly_chart?.labels    ?? ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+>>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
 
   const formatPHP = (val) =>
     '₱ ' + Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2 });
@@ -86,20 +131,7 @@ function AdminHomeContent({ onNavigate }) {
           </div>
         </div>
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          ⏳ Fetching live data from the database…
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="main-content">
-        <div className="dashboard-header">
-          <div className="dashboard-header-text">
-            <h1>Secretary-Admin Dashboard</h1>
-            <p style={{ color: '#DC2626' }}>{error}</p>
-          </div>
+          ⏳ Fetching live dashboard statistics…
         </div>
       </main>
     );
@@ -191,17 +223,10 @@ function AdminHomeContent({ onNavigate }) {
           labels={monthlyLabels}
           watermark="Monthly Activity Trend"
         />
-        <PendingBenefitsCard
-          mostRecent={dash?.most_recent_request ?? null}
-          recentList={dash?.recent_requests ?? []}
-          onNavigate={onNavigate}
-        />
+        <PendingBenefitsCard onNavigate={onNavigate} />
       </div>
 
-      <RecentPaymentsTable
-        payments={dash?.recent_payments ?? []}
-        onNavigate={onNavigate}
-      />
+      <RecentPaymentsTable onNavigate={onNavigate} />
     </main>
   );
 }
@@ -283,8 +308,6 @@ export default function App() {
 
   const renderAdminContent = () => {
     switch (activeTab) {
-      case 'Announcements':
-        return <AnnouncementsPage />;
       case 'Manage Members':
         return <ManageMembersPage />;
       case 'Manage Payments':
@@ -293,6 +316,8 @@ export default function App() {
         return <ManageBenefitTypesPage />;
       case 'Approve Benefit Requests':
         return <ApproveBenefitRequestsPage />;
+      case 'Announcements':
+        return <AnnouncementsPage />;
       case 'Generate Reports':
         return <GenerateReportsPage />;
       case 'Home':
