@@ -265,39 +265,10 @@ export default function Navbar({
             <span className="badge-label">{roleBadge}</span>
           </div>
 
-          {/* User Profile (Clickable to trigger Sign Out on all screen sizes) */}
-          <div
-            className="user-profile-summary"
-            onClick={() => {
-              if (onLogout) setShowSignOutModal(true);
-            }}
-            title={onLogout ? "Click to Sign Out" : undefined}
-            style={{ cursor: onLogout ? 'pointer' : 'default' }}
-          >
-            <div 
-              className="avatar-circle"
-              style={{
-                overflow: 'hidden',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                backgroundColor: '#fff',
-                border: '2px solid #F4B942',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-              }}
-            >
-              {photoUrl && !photoError ? (
-                <img
-                  src={photoUrl}
-                  alt={userName}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  onError={() => setPhotoError(true)}
-                />
-              ) : (
-                userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'SA'
-              )}
+          {/* User Profile */}
+          <div className="user-profile-summary">
+            <div className="avatar-circle">
+              {(userName || 'User').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'SA'}
             </div>
             <div className="user-name-role">
               <span className="user-name">{userName}</span>

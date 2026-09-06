@@ -8,8 +8,9 @@ export default defineConfig({
     proxy: {
       // Proxy all /api requests to the Laravel backend during development
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+        secure: false,
       },
       // Proxy /storage requests so uploaded profile photos & proofs load seamlessly
       '/storage': {
