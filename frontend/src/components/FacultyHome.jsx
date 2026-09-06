@@ -95,7 +95,6 @@ export default function FacultyHome({ currentUser, onNavigate }) {
     <main className="main-content" ref={containerRef}>
       {/* Page Header / Profile Summary Row */}
       <div className="faculty-profile-header-card">
-<<<<<<< HEAD
         <div 
           className="faculty-avatar-large"
           style={{
@@ -122,10 +121,6 @@ export default function FacultyHome({ currentUser, onNavigate }) {
           ) : (
             user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'FM'
           )}
-=======
-        <div className="faculty-avatar-large">
-          {getInitials(user.name, 'FM')}
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
         </div>
         <div className="faculty-profile-info">
           <div className="faculty-profile-name">{user.name}</div>
@@ -209,7 +204,6 @@ export default function FacultyHome({ currentUser, onNavigate }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {recentPayments.length > 0 ? (
-<<<<<<< HEAD
               recentPayments.map(p => (
                 <div key={p.id} className="pending-list-item">
                   <div className="item-left">
@@ -219,29 +213,11 @@ export default function FacultyHome({ currentUser, onNavigate }) {
                   <span className={`status-tag ${p.status === 'Verified' || p.status === 'Completed' ? 'verified' : p.status === 'Pending' || p.status === 'To verify' ? 'to-verify' : 'declined'}`} style={{ padding: '4px 12px', fontSize: '0.72rem' }}>
                     {p.status}
                   </span>
-=======
-              recentPayments.map(pmt => (
-                <div key={pmt.id} className="pending-list-item">
-                  <div className="item-left">
-                    <span className="item-member" style={{ fontSize: '0.95rem' }}>{pmt.type}</span>
-                    <span className="item-benefit">{pmt.refNo} • {pmt.date}</span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>{pmt.amount}</div>
-                    <span className={`status-tag ${pmt.status === 'Verified' || pmt.status === 'Completed' ? 'approved' : 'pending'}`} style={{ fontSize: '0.72rem' }}>
-                      {pmt.status}
-                    </span>
-                  </div>
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
                 </div>
               ))
             ) : (
               <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '16px 0' }}>
-<<<<<<< HEAD
-                No recent payments found.
-=======
                 No recent payment remittances recorded.
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
               </div>
             )}
           </div>

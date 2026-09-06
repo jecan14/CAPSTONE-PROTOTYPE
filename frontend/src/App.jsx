@@ -1,8 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-<<<<<<< HEAD
-import { fetchDashboard, fetchBenefitRequests, getUser, clearAuth, fetchCurrentUser } from './api';
-=======
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -16,7 +12,7 @@ import GenerateReportsPage from './components/GenerateReportsPage';
 import AnnouncementsPage from './components/AnnouncementsPage';
 import FacultyPanel from './components/FacultyPanel';
 import LoginPage from './components/LoginPage';
-import { fetchDashboard } from './api';
+import { fetchDashboard, fetchBenefitRequests, getUser, clearAuth, fetchCurrentUser } from './api';
 import { animatePageEntrance, animateStatCards } from './utils/animations';
 import './App.css';
 
@@ -25,7 +21,6 @@ function AdminHomeContent({ onNavigate }) {
   const panelsRef       = useRef(null);
   const yearDropdownRef = useRef(null);
 
-<<<<<<< HEAD
   const [dash,             setDash]             = useState(null);
   const [loading,          setLoading]          = useState(true);
   const [error,            setError]            = useState(null);
@@ -33,41 +28,12 @@ function AdminHomeContent({ onNavigate }) {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
   useEffect(() => {
-    fetchDashboard({ year: selectedYear })
+    fetchDashboard(selectedYear)
       .then(data => {
         setDash(data);
         setError(null);
       })
       .catch(() => setError('Could not load dashboard data.'))
-=======
-  const [dash,    setDash]    = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const defaultDashboard = {
-    total_contributions: 1482500,
-    this_month_contributions: 145800,
-    current_month_label: 'July 2026',
-    cumulative_chart: {
-      data: [120000, 135000, 140000, 142000, 148000, 155000],
-      labels: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
-    },
-    monthly_chart: {
-      data: [18000, 22000, 21000, 25000, 27000, 32000],
-      labels: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard()
-      .then(data => {
-        if (data && typeof data === 'object') {
-          setDash(data);
-        } else {
-          setDash(defaultDashboard);
-        }
-      })
-      .catch(() => setDash(defaultDashboard))
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
       .finally(() => setLoading(false));
   }, [selectedYear]);
 
@@ -95,7 +61,6 @@ function AdminHomeContent({ onNavigate }) {
   }, [showYearDropdown]);
 
   // ── Derive chart/stat values from API response ──────────────
-<<<<<<< HEAD
   const currentYearInt         = new Date().getFullYear();
   const availableYears         = dash?.available_years?.length
     ? dash.available_years
@@ -104,19 +69,9 @@ function AdminHomeContent({ onNavigate }) {
   const thisMonthContributions = dash?.this_month_contributions ?? 0;
   const currentMonthLabel      = dash?.current_month_label      ?? '';
   const cumulativeData         = dash?.cumulative_chart?.data   ?? [0, 0, 0, 0, 0, 0];
-  const cumulativeLabels       = dash?.cumulative_chart?.labels ?? ['','','','','',''];
+  const cumulativeLabels       = dash?.cumulative_chart?.labels ?? ['', '', '', '', '', ''];
   const monthlyData            = dash?.monthly_chart?.data      ?? [0, 0, 0, 0, 0, 0];
-  const monthlyLabels          = dash?.monthly_chart?.labels    ?? ['','','','','',''];
-=======
-  const activeDash             = dash || defaultDashboard;
-  const totalContributions     = activeDash?.total_contributions      ?? 1482500;
-  const thisMonthContributions = activeDash?.this_month_contributions ?? 145800;
-  const currentMonthLabel      = activeDash?.current_month_label      ?? 'July 2026';
-  const cumulativeData         = activeDash?.cumulative_chart?.data   ?? [120000, 135000, 140000, 142000, 148000, 155000];
-  const cumulativeLabels       = activeDash?.cumulative_chart?.labels ?? ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  const monthlyData            = activeDash?.monthly_chart?.data      ?? [18000, 22000, 21000, 25000, 27000, 32000];
-  const monthlyLabels          = activeDash?.monthly_chart?.labels    ?? ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
->>>>>>> 86500e3 (diko na alam ginagawa ko rahhh)
+  const monthlyLabels          = dash?.monthly_chart?.labels    ?? ['', '', '', '', '', ''];
 
   const formatPHP = (val) =>
     '₱ ' + Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2 });
