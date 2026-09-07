@@ -21,36 +21,6 @@ function LoginPage({ onLoginSuccess, onLogin }) {
     }
   };
 
-  const handleQuickFill = async (demoEmail, demoRole) => {
-    setEmail(demoEmail);
-    setPassword('password');
-    setError('');
-    setLoading(true);
-
-    try {
-      // Attempt a real API login with the demo credentials
-      const response = await login(demoEmail, 'password');
-      setAuth(response.token, response.user);
-      triggerLoginSuccess(response.user);
-    } catch (err) {
-      // Backend unreachable — fall back to offline demo mode
-      const demoUser = demoRole === 'faculty' ? {
-        id: 2,
-        name: 'Prof. Maria Santos',
-        email: demoEmail,
-        role: 'faculty'
-      } : {
-        id: 1,
-        name: 'Sec. Administrator',
-        email: demoEmail,
-        role: 'admin'
-      };
-      setAuth('demo_token_' + Date.now(), demoUser);
-      triggerLoginSuccess(demoUser);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -277,38 +247,6 @@ function LoginPage({ onLoginSuccess, onLogin }) {
             </button>
           </form>
 
-          {/* Clickable Test Credentials */}
-          <div className="login-hint">
-            <p className="login-hint-title">Click to Quick Sign In:</p>
-            <div 
-              className="login-hint-row" 
-              onClick={() => handleQuickFill('admin@ucare.local', 'admin')}
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '4px', transition: 'background 0.15s' }}
-            >
-              <span className="login-hint-badge login-hint-badge--admin">Admin</span>
-              <code>admin@ucare.local</code>
-              <span className="login-hint-sep">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-                Click to Login
-              </span>
-            </div>
-            <div 
-              className="login-hint-row" 
-              onClick={() => handleQuickFill('faculty@ucare.local', 'faculty')}
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '4px', transition: 'background 0.15s', marginTop: '6px' }}
-            >
-              <span className="login-hint-badge login-hint-badge--faculty">Faculty</span>
-              <code>faculty@ucare.local</code>
-              <span className="login-hint-sep">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-                Click to Login
-              </span>
-            </div>
-          </div>
 
           <p className="login-footer-text">
             U.C.A.R.E &copy; {new Date().getFullYear()} — ISPSC Tagudin Faculty Union

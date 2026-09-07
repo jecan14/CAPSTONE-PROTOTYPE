@@ -20,12 +20,6 @@ export default function FacultyPaymentHistory() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const defaultPayments = [
-    { id: 101, payment_date: 'Jul 15, 2026', type: 'Monthly Contribution Dues', refNo: 'REF-2026-094', amount: '₱ 500.00', status: 'Verified' },
-    { id: 102, payment_date: 'Jun 10, 2026', type: 'Special Assessment Fee', refNo: 'REF-2026-088', amount: '₱ 300.00', status: 'Verified' },
-    { id: 103, payment_date: 'Aug 01, 2026', type: 'Monthly Contribution Dues', refNo: 'REF-2026-102', amount: '₱ 500.00', status: 'To verify' }
-  ];
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -40,14 +34,9 @@ export default function FacultyPaymentHistory() {
         const apiPayments = payRes?.data || [];
         const combined = [...localPayments, ...apiPayments];
 
-        if (combined.length > 0) {
-          setPayments(combined);
-        } else {
-          setPayments(defaultPayments);
-        }
+        setPayments(combined);
       } catch (err) {
-        const localPayments = JSON.parse(localStorage.getItem('ucare_submitted_payments') || '[]');
-        setPayments(localPayments.length > 0 ? localPayments : defaultPayments);
+        setPayments([]);
       } finally {
         setLoading(false);
       }
@@ -67,7 +56,7 @@ export default function FacultyPaymentHistory() {
     }
   }, [loading]);
 
-  const totalPaid = dashboardData?.total_contributions || 28500;
+  const totalPaid = dashboardData?.total_contributions != null ? dashboardData.total_contributions : 0;
 
   // Calculate unverified amount safely using parseAmountNumber
   const pendingAmount = payments
@@ -82,7 +71,7 @@ export default function FacultyPaymentHistory() {
 
   const contributionsChart = (dashboardData?.contributions_chart && Array.isArray(dashboardData.contributions_chart) && dashboardData.contributions_chart.length > 0)
     ? dashboardData.contributions_chart
-    : [4000, 4500, 5000, 4800, 5200, 5000];
+    : [0, 0, 0, 0, 0, 0];
 
   const formatCurrency = (val) => '₱ ' + Number(parseAmountNumber(val)).toLocaleString('en-US', { minimumFractionDigits: 2 });
   

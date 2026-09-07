@@ -10,44 +10,29 @@ export default function FacultyRequests() {
   const containerRef = useRef(null);
   const tableRef = useRef(null);
 
-  const defaultRequests = [
-    { id: 1, type: 'Medical Assistance', date: 'Jul 26, 2026', amount: '₱ 15,000.00', status: 'Pending', notes: 'Hospitalization claim under review.' },
-    { id: 2, type: 'Educational Assistance', date: 'May 12, 2026', amount: '₱ 8,500.00', status: 'Approved', notes: 'Conference registration fee reimbursed.' },
-    { id: 3, type: 'Bereavement Assistance', date: 'Jan 10, 2026', amount: '₱ 10,000.00', status: 'Approved', notes: 'Mutual aid claim processed.' }
-  ];
-
   const loadRequests = async () => {
     try {
+      localStorage.removeItem('ucare_benefit_requests');
       const res = await fetchFacultyRequests().catch(() => null);
       const apiRequests = res?.data || [];
-      const localRequests = JSON.parse(localStorage.getItem('ucare_benefit_requests') || '[]');
 
-      const normalizedLocal = localRequests.map(item => ({
+      const normalized = apiRequests.map(item => ({
         id: item.id,
-        type: item.type || item.benefitType || 'Assistance Request',
-        date: item.date || item.dateFiled || 'Recent',
-        amount: item.amount || item.amountRequested || '₱ 0.00',
+        type: item.benefit_type?.benefit_name || item.benefit_type?.name || (typeof item.benefit_type === 'string' ? item.benefit_type : null) || item.type || 'Assistance Request',
+        date: item.request_date
+          ? new Date(item.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : (item.date || 'Recent'),
+        amount: item.amount_requested != null
+          ? `₱ ${Number(item.amount_requested).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+          : (item.amount || '₱ 0.00'),
         status: item.status || 'Pending',
-        notes: item.notes || 'Application submitted'
+        notes: item.reason || item.notes || 'Application submitted'
       }));
 
-      const combined = [...normalizedLocal, ...apiRequests];
-      if (combined.length > 0) {
-        setRequests(combined);
-      } else {
-        setRequests(defaultRequests);
-      }
+      setRequests(normalized);
     } catch (err) {
-      const localRequests = JSON.parse(localStorage.getItem('ucare_benefit_requests') || '[]');
-      const normalizedLocal = localRequests.map(item => ({
-        id: item.id,
-        type: item.type || item.benefitType || 'Assistance Request',
-        date: item.date || item.dateFiled || 'Recent',
-        amount: item.amount || item.amountRequested || '₱ 0.00',
-        status: item.status || 'Pending',
-        notes: item.notes || 'Application submitted'
-      }));
-      setRequests(normalizedLocal.length > 0 ? normalizedLocal : defaultRequests);
+      console.error('Failed to load faculty assistance requests:', err);
+      setRequests([]);
     } finally {
       setLoading(false);
     }

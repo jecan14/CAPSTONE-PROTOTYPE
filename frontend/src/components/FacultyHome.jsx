@@ -47,22 +47,12 @@ export default function FacultyHome({ currentUser, onNavigate }) {
   }, [loading]);
 
   // Provide robust fallbacks so UI never crashes or renders blank
-  const totalContributions = dashboardData?.total_contributions || 28500;
-  const activeRequestsCount = dashboardData?.active_requests || 1;
+  const totalContributions = dashboardData?.total_contributions != null ? dashboardData.total_contributions : 0;
+  const activeRequestsCount = dashboardData?.active_requests != null ? dashboardData.active_requests : 0;
 
-  const recentRequests = (dashboardData?.recent_requests && Array.isArray(dashboardData.recent_requests) && dashboardData.recent_requests.length > 0)
-    ? dashboardData.recent_requests
-    : [
-        { id: 1, type: 'Medical Assistance', date: 'Jul 26, 2026', amount: '₱ 15,000.00', status: 'Pending' },
-        { id: 2, type: 'Educational Aid', date: 'May 12, 2026', amount: '₱ 8,500.00', status: 'Approved' }
-      ];
+  const recentRequests = Array.isArray(dashboardData?.recent_requests) ? dashboardData.recent_requests : [];
 
-  const recentPayments = (dashboardData?.recent_payments && Array.isArray(dashboardData.recent_payments) && dashboardData.recent_payments.length > 0)
-    ? dashboardData.recent_payments
-    : [
-        { id: 101, type: 'Monthly Contribution', date: 'Jul 15, 2026', refNo: 'REF-2026-094', amount: '₱ 500.00', status: 'Verified' },
-        { id: 102, type: 'Special Assessment', date: 'Jun 10, 2026', refNo: 'REF-2026-088', amount: '₱ 300.00', status: 'Verified' }
-      ];
+  const recentPayments = Array.isArray(dashboardData?.recent_payments) ? dashboardData.recent_payments : [];
   
   const chartLabels = (dashboardData?.chart_labels && Array.isArray(dashboardData.chart_labels) && dashboardData.chart_labels.length > 0)
     ? dashboardData.chart_labels
@@ -70,11 +60,11 @@ export default function FacultyHome({ currentUser, onNavigate }) {
 
   const contributionsChart = (dashboardData?.contributions_chart && Array.isArray(dashboardData.contributions_chart) && dashboardData.contributions_chart.length > 0)
     ? dashboardData.contributions_chart
-    : [4000, 4500, 5000, 4800, 5200, 5000];
+    : [0, 0, 0, 0, 0, 0];
 
   const requestsChart = (dashboardData?.requests_chart && Array.isArray(dashboardData.requests_chart) && dashboardData.requests_chart.length > 0)
     ? dashboardData.requests_chart
-    : [1, 0, 2, 1, 0, 1];
+    : [0, 0, 0, 0, 0, 0];
 
   const formatCurrency = (val) => '₱ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
