@@ -33,6 +33,31 @@ export function getUser() {
 }
 
 /**
+ * Resolve profile photo URL cleanly to avoid port mismatch, double /storage prefixes,
+ * or direct hits to Apache port 80 when in development.
+ */
+export function resolvePhotoUrl(photo) {
+  if (!photo) return null;
+  if (typeof photo !== 'string') return null;
+  if (photo.startsWith('blob:') || photo.startsWith('data:')) return photo;
+
+  // Match full localhost / 127.0.0.1 URLs (with or without port) pointing to /storage/
+  const localhostStorageMatch = photo.match(/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/storage\/(.+)$/i);
+  if (localhostStorageMatch) {
+    return `/storage/${localhostStorageMatch[1]}`;
+  }
+
+  // Any other remote HTTP/HTTPS URL
+  if (photo.startsWith('http://') || photo.startsWith('https://')) {
+    return photo;
+  }
+
+  // Strip leading /storage/ or storage/ and leading slashes
+  const cleanPath = photo.replace(/^\/?storage\//i, '').replace(/^\/+/, '');
+  return `/storage/${cleanPath}`;
+}
+
+/**
  * Fetch fresh authenticated user profile from backend
  */
 export async function fetchCurrentUser() {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { animatePageEntrance, animateModalOpen, animateModalClose } from '../utils/animations';
+import { resolvePhotoUrl } from '../api';
 
 export default function FacultyProfile({ currentUser, onLogout }) {
   const user = currentUser || { name: 'Prof. Maria Santos', email: 'faculty@ucare.local' };
@@ -18,8 +19,6 @@ export default function FacultyProfile({ currentUser, onLogout }) {
   const [passwordFeedback, setPasswordFeedback] = useState('');
 
   // Notification Settings State
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [smsAlerts, setSmsAlerts] = useState(true);
   const [benefitAlerts, setBenefitAlerts] = useState(true);
   const [bulletinAlerts, setBulletinAlerts] = useState(false);
   const [notifSaved, setNotifSaved] = useState(false);
@@ -36,19 +35,16 @@ export default function FacultyProfile({ currentUser, onLogout }) {
 
   // Profile Photo State
   const resolveInitialPhoto = () => {
-    if (user.profile_photo_url) return user.profile_photo_url;
-    if (user.profile_photo) {
-      if (user.profile_photo.startsWith('http://') || user.profile_photo.startsWith('https://')) {
-        return user.profile_photo;
-      }
-      return `/storage/${user.profile_photo.replace(/^\/+/, '')}`;
-    }
-    return null;
+    return resolvePhotoUrl(user.profile_photo_url || user.profile_photo);
   };
   const [photoPreview, setPhotoPreview] = useState(resolveInitialPhoto);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef(null);
+
+  useEffect(() => {
+    setPhotoPreview(resolvePhotoUrl(currentUser?.profile_photo_url || currentUser?.profile_photo));
+  }, [currentUser?.profile_photo, currentUser?.profile_photo_url]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -119,20 +115,15 @@ export default function FacultyProfile({ currentUser, onLogout }) {
     }
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const handlePhotoUpload = async () => {
-    if (!photoFile) return;
+  const uploadPhotoFile = async (fileToUpload) => {
+    const file = fileToUpload || photoFile;
+    if (!file) return false;
     setPhotoUploading(true);
+    setProfileFeedback('Uploading profile photo...');
     try {
       const token = localStorage.getItem('ucare_token');
       const formData = new FormData();
-      formData.append('photo', photoFile);
+      formData.append('photo', file);
 
       const response = await fetch('/api/auth/upload-photo', {
         method: 'POST',
@@ -144,8 +135,11 @@ export default function FacultyProfile({ currentUser, onLogout }) {
 
       if (!response.ok) {
         setProfileFeedback('Error: ' + (data?.message || 'Photo upload failed.'));
-        return;
+        return false;
       }
+
+      const freshUrl = resolvePhotoUrl(data.profile_photo_url || data.photo_url || data.profile_photo);
+      setPhotoPreview(freshUrl);
 
       // Persist new photo URL in localStorage and notify listeners
       const stored = localStorage.getItem('ucare_user');
@@ -156,21 +150,41 @@ export default function FacultyProfile({ currentUser, onLogout }) {
           updatedUser = {
             ...parsed,
             profile_photo: data.profile_photo,
-            profile_photo_url: data.profile_photo_url || data.photo_url || `/storage/${data.profile_photo}`
+            profile_photo_url: freshUrl
           };
           localStorage.setItem('ucare_user', JSON.stringify(updatedUser));
         } catch {}
+      } else {
+        updatedUser = {
+          ...(data.user || user),
+          profile_photo: data.profile_photo,
+          profile_photo_url: freshUrl
+        };
+        localStorage.setItem('ucare_user', JSON.stringify(updatedUser));
       }
+
       if (updatedUser) {
         window.dispatchEvent(new CustomEvent('ucare_user_updated', { detail: updatedUser }));
       }
       setPhotoFile(null);
       setProfileFeedback('Success: Profile photo updated!');
+      return true;
     } catch {
       setProfileFeedback('Error: Could not upload photo. Please try again.');
+      return false;
     } finally {
       setPhotoUploading(false);
     }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+
+    // Auto-upload immediately on select so the user doesn't have to guess
+    await uploadPhotoFile(file);
   };
 
   const handleProfileSubmit = async (e) => {
@@ -178,6 +192,15 @@ export default function FacultyProfile({ currentUser, onLogout }) {
     setProfileSaving(true);
     setProfileFeedback('');
     try {
+      // If photo file is selected and not yet uploaded, upload it first
+      if (photoFile) {
+        const photoOk = await uploadPhotoFile(photoFile);
+        if (!photoOk) {
+          setProfileSaving(false);
+          return;
+        }
+      }
+
       const token = localStorage.getItem('ucare_token');
       const response = await fetch('/api/auth/update-profile', {
         method: 'POST',
@@ -206,20 +229,24 @@ export default function FacultyProfile({ currentUser, onLogout }) {
 
       // Update localStorage so the name in the header reflects immediately
       const stored = localStorage.getItem('ucare_user');
+      let mergedUser = data.data;
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          localStorage.setItem('ucare_user', JSON.stringify({ ...parsed, ...data.data }));
+          mergedUser = { ...parsed, ...data.data };
+          localStorage.setItem('ucare_user', JSON.stringify(mergedUser));
         } catch {}
+      }
+
+      if (mergedUser) {
+        window.dispatchEvent(new CustomEvent('ucare_user_updated', { detail: mergedUser }));
       }
 
       setProfileFeedback('Success: Profile updated successfully!');
       setTimeout(() => {
         setProfileFeedback('');
         handleCloseModal();
-        // Reload so the header name refreshes
-        window.location.reload();
-      }, 1100);
+      }, 900);
 
     } catch (err) {
       setProfileFeedback('Error: Could not connect to the server. Please try again.');
@@ -244,13 +271,15 @@ export default function FacultyProfile({ currentUser, onLogout }) {
         <div
           className="faculty-avatar-large"
           style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
-          title="Click Edit Profile to change your photo"
+          onClick={() => setActiveModal('editProfile')}
+          title="Click to update your profile and photo"
         >
           {photoPreview ? (
             <img
               src={photoPreview}
               alt="Profile"
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+              onError={() => setPhotoPreview(null)}
             />
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontSize: '1.8rem', fontWeight: '800' }}>
@@ -333,7 +362,7 @@ export default function FacultyProfile({ currentUser, onLogout }) {
             </div>
             <div>
               <div className="setting-card-title">Notification Settings</div>
-              <div className="setting-card-subtitle">Email &amp; SMS alerts for unpaid dues</div>
+              <div className="setting-card-subtitle">Benefit claims &amp; union announcements</div>
             </div>
           </div>
           <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>&gt;</span>
@@ -414,12 +443,28 @@ export default function FacultyProfile({ currentUser, onLogout }) {
                   overflow: 'hidden', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '1.5rem', fontWeight: '800', color: '#fff',
-                  border: '3px solid var(--primary-maroon)'
+                  border: '3px solid var(--primary-maroon)',
+                  position: 'relative'
                 }}>
                   {photoPreview ? (
-                    <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={() => setPhotoPreview(null)}
+                    />
                   ) : (
                     (user.name || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                  )}
+                  {photoUploading && (
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'rgba(0,0,0,0.45)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.8rem', color: '#fff'
+                    }}>
+                      ⌛
+                    </div>
                   )}
                 </div>
 
@@ -427,7 +472,7 @@ export default function FacultyProfile({ currentUser, onLogout }) {
                   <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
                     Profile Photo
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -440,23 +485,23 @@ export default function FacultyProfile({ currentUser, onLogout }) {
                       className="btn-secondary"
                       style={{ fontSize: '0.78rem', padding: '5px 12px' }}
                       onClick={() => photoInputRef.current?.click()}
+                      disabled={photoUploading}
                     >
-                      Choose Photo
+                      {photoUploading ? 'Uploading...' : 'Choose Photo'}
                     </button>
-                    {photoFile && (
+                    {photoFile && !photoUploading && (
                       <button
                         type="button"
                         className="btn-primary"
                         style={{ fontSize: '0.78rem', padding: '5px 12px' }}
-                        onClick={handlePhotoUpload}
-                        disabled={photoUploading}
+                        onClick={() => uploadPhotoFile(photoFile)}
                       >
-                        {photoUploading ? 'Uploading...' : 'Upload'}
+                        Upload
                       </button>
                     )}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    JPG, PNG or WebP · Max 2MB
+                    JPG, PNG or WebP · Max 5MB
                   </div>
                 </div>
               </div>
@@ -688,21 +733,6 @@ export default function FacultyProfile({ currentUser, onLogout }) {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '10px 12px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
-                  <div>
-                    <div style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-main)' }}>⚠️ Unpaid Dues Email Reminders</div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Get email alerts when monthly contribution is due</div>
-                  </div>
-                  <input type="checkbox" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary-maroon)' }} />
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '10px 12px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
-                  <div>
-                    <div style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-main)' }}>📱 SMS Verification Alerts</div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Receive SMS notification when payment is verified</div>
-                  </div>
-                  <input type="checkbox" checked={smsAlerts} onChange={(e) => setSmsAlerts(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary-maroon)' }} />
-                </label>
 
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '10px 12px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
                   <div>
@@ -735,43 +765,158 @@ export default function FacultyProfile({ currentUser, onLogout }) {
          ─────────────────────────────────────────────────────────────────── */}
       {activeModal === 'policies' && (
         <div className="modal-overlay" ref={overlayRef}>
-          <div className="modal-content" ref={modalRef} style={{ maxWidth: '660px' }}>
+          <div className="modal-content" ref={modalRef} style={{ maxWidth: '740px' }}>
             <div className="modal-header">
               <h3>ISPSC Faculty Union Laws &amp; Policies</h3>
               <button className="btn-close-modal" onClick={handleCloseModal}>✕</button>
             </div>
 
-            <div className="modal-body-form" style={{ maxHeight: '440px', overflowY: 'auto', gap: '16px', fontSize: '0.875rem' }}>
-              <div style={{ background: 'linear-gradient(135deg, #8B1E3F 0%, #6E1731 100%)', color: '#FFF', padding: '16px', borderRadius: '8px' }}>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#F4B942' }}>ISPSC Tagudin Federated Faculty Union</h4>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#FCE8B3' }}>Compensation &amp; Assistance Records Engine (U.C.A.R.E.) Charter</p>
-              </div>
-
-              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                <h4 style={{ color: 'var(--primary-maroon)', marginTop: 0 }}>Article I — Monthly Union Contribution Dues</h4>
-                <p style={{ color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>
-                  Every regular faculty member of ISPSC Tagudin Campus shall remit a mandatory monthly contribution of <strong>₱500.00</strong> to support the mutual assistance fund, operational expenditures, and emergency aid reserves.
+            <div className="modal-body-form" style={{ maxHeight: '520px', overflowY: 'auto', gap: '18px', fontSize: '0.875rem' }}>
+              <div style={{ background: 'linear-gradient(135deg, #8B1E3F 0%, #6E1731 100%)', color: '#FFF', padding: '18px 20px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(139, 30, 63, 0.2)' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#F4B942', fontWeight: '800', letterSpacing: '0.02em' }}>
+                  Ilocos Sur Polytechnic State College Federated Faculty Union (IFFU)
+                </h4>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#FCE8B3' }}>
+                  Constitution and By-Laws • Preamble &amp; Articles I to V
                 </p>
               </div>
 
-              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                <h4 style={{ color: 'var(--primary-maroon)', marginTop: 0 }}>Article II — Assistance Fund Benefit Categories</h4>
-                <ul style={{ paddingLeft: '20px', margin: '4px 0', lineHeight: '1.6' }}>
-                  <li><strong>Medical &amp; Hospitalization Assistance:</strong> Financial grant up to <strong>₱15,000.00</strong> per illness or hospital confinement.</li>
-                  <li><strong>Bereavement &amp; Funeral Assistance:</strong> Death benefit grant up to <strong>₱10,000.00</strong> for immediate family members.</li>
-                  <li><strong>Educational &amp; Calamity Relief:</strong> Financial assistance up to <strong>₱8,000.00</strong> for natural disaster damage or academic research support.</li>
-                </ul>
+              {/* Preamble */}
+              <div style={{
+                background: '#FAF5F6',
+                border: '1px solid #F1D4DC',
+                borderLeft: '4px solid var(--primary-maroon)',
+                padding: '14px 16px',
+                borderRadius: '0 8px 8px 0'
+              }}>
+                <div style={{ fontWeight: '800', fontSize: '0.88rem', color: 'var(--primary-maroon)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                  Preamble
+                </div>
+                <p style={{ color: 'var(--text-main)', lineHeight: '1.65', margin: 0, fontStyle: 'italic', fontSize: '0.88rem' }}>
+                  We, the faculty members of the Ilocos Sur Polytechnic State College, in order to ensure oneness and unity, protect and uphold our individual and collective rights, promote effective and efficient performance of our duties with the highest degree of responsibility, integrity and loyalty as well as to foster harmonious and progressive faculty- administrator relations do herby promulgate this Constitution and By- laws.
+                </p>
               </div>
 
+              {/* Article I */}
+              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '14px' }}>
+                <h4 style={{ color: 'var(--primary-maroon)', margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: '800' }}>
+                  Article I – NAME AND DOMICILE
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-main)', lineHeight: '1.55' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 1.</strong> This organization shall be known as the Ilocos Sur Polytechnic State College Federated Faculty Union (IFFU) hereinafter referred to as the UNION.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 2.</strong> The domicile of the union shall be at the ISPSC, Main Campus, Sta Maria, Ilocos Sur.
+                  </p>
+                </div>
+              </div>
+
+              {/* Article II */}
+              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '14px' }}>
+                <h4 style={{ color: 'var(--primary-maroon)', margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: '800' }}>
+                  Article II – DECLARATION OF OBJECTIVES
+                </h4>
+                <p style={{ color: 'var(--text-main)', margin: '0 0 8px 0', fontWeight: '600' }}>
+                  The Union commits itself to the pursuit of the following objectives:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-main)', lineHeight: '1.55' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 1.</strong> To establish an organization that will represent the ISPSC Faculty in the Board of Trustees, council, committee, or body and in any collective negotiation with the administration.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 2.</strong> To promote the general welfare of the faculty members of ISPSC.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 3.</strong> To protect and uphold the individual and collective rights of faculty members of ISPSC.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 4.</strong> To promote efficient and effective performance of faculty duties with the highest degree of responsibility, integrity and loyalty thereby elevating their calling to the highest level of competence, respect and dedication to public service.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 5.</strong> To foster harmonious and progressive faculty- administrator relations.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 6.</strong> To help administration in the formulation and implementation of school (college/university) policies, rules and regulations.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 7.</strong> To -inculcate among faculty members love of the College /university imbued with the spirit of loyalty and dedication.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 8.</strong> To promote closer and stronger relationship, and genuine brotherhood among the faculty, staff, students, and administrators to enhance better service to the community and to attain ultimate peace, unity, and progress among people.
+                  </p>
+                </div>
+              </div>
+
+              {/* Article III */}
+              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '14px' }}>
+                <h4 style={{ color: 'var(--primary-maroon)', margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: '800' }}>
+                  Article III – MEMBERSHIP
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-main)', lineHeight: '1.55' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 1.</strong> All ISPSC faculty members who hold an academic rank not otherwise disqualified under any of the succeeding provisions and without regard to status of appointment, sex, race, nationality, religion or political belief or affiliations is a member of the Union. Except faculty members under contract of service.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 3.</strong> Any member of the Union who hold managerial/ administrative position higher than program head like vice presidents, directors, deans and principals of lateral or vertical promotion or by special appointive designation or any equivalent positions shall not be eligible to hold any elective or appointive position in the Union. Including program head of campuses without deans.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Section 4.</strong> In the event that an officer is appointed or designated and assumed any position stated under Section 3 the said position shall then be considered vacant <em>*transfer section 3 and 4 to Article VI</em>
+                  </p>
+                  <div>
+                    <strong>Section 5.</strong> A faculty loses his membership on the following grounds:
+                    <ul style={{ margin: '6px 0 0 0', paddingLeft: '22px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <li><strong>a.</strong> dismissal from the service, resignation from the college or transfer to another government agency;</li>
+                      <li><strong>b.</strong> retirement from government service;</li>
+                      <li><strong>c.</strong> voluntary withdrawal from the union; and</li>
+                      <li><strong>d.</strong> Death.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Article IV */}
+              <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '14px' }}>
+                <h4 style={{ color: 'var(--primary-maroon)', margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: '800' }}>
+                  Article IV – RIGHTS AND BENEFITS OF MEMBERS
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-main)', lineHeight: '1.55' }}>
+                  <div>
+                    <strong>Section 1.</strong> A member in good standing shall have the following rights and benefits:
+                    <ul style={{ margin: '6px 0 0 0', paddingLeft: '22px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <li><strong>a.</strong> To exercise the right to vote on all matters relating to the affairs of the Union subject to the provisions of section 53. hereof;</li>
+                      <li><strong>b.</strong> To be eligible to run to any elective or appointed to office in the Union subject to the provisions of Article X section 13 hereof;</li>
+                      <li><strong>c.</strong> To participate in all deliberations/ meetings of the Union;</li>
+                      <li><strong>d.</strong> To avail of all the facilities and services of the Union;</li>
+                      <li><strong>e.</strong> To examine the records and books of the Union during business hours; and</li>
+                      <li><strong>f.</strong> To receive benefits obtained through the CNA subject to DBM rules and regulations.</li>
+                    </ul>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0' }}>
+                    <strong>Section 2.</strong> A member certified by the Union President who is not of good standing shall not be entitled from the benefits stated from letter a to e of Section 1.
+                  </p>
+                </div>
+              </div>
+
+              {/* Article V */}
               <div>
-                <h4 style={{ color: 'var(--primary-maroon)', marginTop: 0 }}>Article III — Remittance Verification &amp; Auditing</h4>
-                <p style={{ color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>
-                  All uploaded proof of payment receipts are audited by the Union Treasurer and Secretary-Administrator. Official verification is issued within 5 working days upon receipt of remittance proof.
-                </p>
+                <h4 style={{ color: 'var(--primary-maroon)', margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: '800' }}>
+                  Article V – DUTIES AND RESPONSIBILITIES OF MEMBERS
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-main)', lineHeight: '1.55' }}>
+                  <div>
+                    <strong>Section 1.</strong> A member shall have the following duties and responsibilities:
+                    <ul style={{ margin: '6px 0 0 0', paddingLeft: '22px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <li><strong>a.</strong> To obey and comply with the Constitution and By - laws, and other rules and regulations that may be promulgated by the Union;</li>
+                      <li><strong>b.</strong> To attend Union meetings and activities that may be called upon by the officers; and</li>
+                      <li><strong>c.</strong> Any member who was not able to attend meetings and activities of the Union without justifiable reason, shall pay a fee amounting to one thousand pesos (1000.00) for officers and 500 hundred pesos (500.00) to the Union treasurer.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
-              <div className="modal-actions" style={{ marginTop: '12px' }}>
-                <button className="btn-primary" onClick={handleCloseModal}>I Understand &amp; Agree</button>
+              <div className="modal-actions" style={{ marginTop: '14px' }}>
+                <button className="btn-primary" onClick={handleCloseModal}>Close</button>
               </div>
             </div>
           </div>

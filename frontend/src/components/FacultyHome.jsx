@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import StatCard from './StatCard';
 import { animatePageEntrance, animateStatCards } from '../utils/animations';
-import { fetchFacultyDashboard, fetchFacultyPayments } from '../api';
+import { fetchFacultyDashboard, fetchFacultyPayments, resolvePhotoUrl } from '../api';
 
 const parseAmountNumber = (val) => {
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -94,12 +94,6 @@ export default function FacultyHome({ currentUser, onNavigate }) {
   const contributionsChart = (dashboardData?.contributions_chart && Array.isArray(dashboardData.contributions_chart) && dashboardData.contributions_chart.length > 0)
     ? dashboardData.contributions_chart
     : [0, 0, 0, 0, 0, 0];
-
-  const resolvePhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-    return `/storage/${photo.replace(/^\/+/, '')}`;
-  };
 
   const photoUrl = resolvePhotoUrl(user.profile_photo_url || user.profile_photo);
   const [photoError, setPhotoError] = useState(false);
