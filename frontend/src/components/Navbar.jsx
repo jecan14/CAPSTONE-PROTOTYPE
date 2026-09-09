@@ -4,6 +4,7 @@ import {
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  resolvePhotoUrl,
 } from '../api';
 
 // =========================================================================
@@ -34,12 +35,6 @@ export default function Navbar({
   useEffect(() => {
     setPhotoError(false);
   }, [userPhoto]);
-
-  const resolvePhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-    return `/storage/${photo.replace(/^\/+/, '')}`;
-  };
 
   const photoUrl = resolvePhotoUrl(userPhoto);
 
@@ -268,7 +263,16 @@ export default function Navbar({
           {/* User Profile */}
           <div className="user-profile-summary">
             <div className="avatar-circle">
-              {(userName || 'User').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'SA'}
+              {photoUrl && !photoError ? (
+                <img
+                  src={photoUrl}
+                  alt={userName || 'User'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '50%' }}
+                  onError={() => setPhotoError(true)}
+                />
+              ) : (
+                (userName || 'User').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'SA'
+              )}
             </div>
             <div className="user-name-role">
               <span className="user-name">{userName}</span>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolvePhotoUrl } from '../api';
 
 const STATUS_CLASS = {
   verified:  'approved',
@@ -69,9 +70,9 @@ export default function RecentPaymentsTable({ payments = [], onNavigate }) {
                           fontWeight: '700'
                         }}
                       >
-                        {item.profile_photo_url || item.profile_photo ? (
+                        {resolvePhotoUrl(item.profile_photo_url || item.profile_photo) ? (
                           <img
-                            src={item.profile_photo_url || (item.profile_photo.startsWith('http') ? item.profile_photo : `/storage/${item.profile_photo.replace(/^\/+/, '')}`)}
+                            src={resolvePhotoUrl(item.profile_photo_url || item.profile_photo)}
                             alt={item.member}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}

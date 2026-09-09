@@ -1,17 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { animatePageEntrance, animateTableRows, animateModalOpen, animateModalClose } from '../utils/animations';
-import { fetchFacultyMembers, createFacultyMember, updateFacultyMember, deleteFacultyMember } from '../api';
+import { fetchFacultyMembers, createFacultyMember, updateFacultyMember, deleteFacultyMember, resolvePhotoUrl } from '../api';
 
 const getPhotoUrl = (member) => {
   if (!member) return null;
-  if (member.profile_photo_url) return member.profile_photo_url;
-  if (member.profile_photo) {
-    if (member.profile_photo.startsWith('http://') || member.profile_photo.startsWith('https://')) {
-      return member.profile_photo;
-    }
-    return `/storage/${member.profile_photo.replace(/^\/+/, '')}`;
-  }
-  return null;
+  return resolvePhotoUrl(member.profile_photo_url || member.profile_photo);
 };
 
 export default function ManageMembersPage() {

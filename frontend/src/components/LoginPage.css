@@ -361,81 +361,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Test credentials hint ───────────────────────────────── */
-.login-hint {
-  margin-top: 24px;
-  background: var(--bg-app);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.login-hint-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 2px;
-}
-
-.login-hint-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  flex-wrap: wrap;
-}
-
-.login-hint-row code {
-  font-size: 0.78rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  padding: 1px 6px;
-  color: var(--text-main);
-  font-family: 'Courier New', monospace;
-}
-
-.login-hint-sep {
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: auto;
-  font-size: 0.74rem;
-  font-weight: 600;
-  transition: color var(--transition-fast);
-}
-
-.login-hint-row:hover .login-hint-sep {
-  color: var(--primary-maroon);
-}
-
-.login-hint-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  text-transform: uppercase;
-}
-
-.login-hint-badge--admin {
-  background: var(--badge-admin-bg);
-  color: var(--badge-admin-text);
-  border: 1px solid var(--badge-admin-border);
-}
-
-.login-hint-badge--faculty {
-  background: var(--status-approved-bg);
-  color: var(--status-approved-text);
-  border: 1px solid var(--status-approved-border);
-}
 
 /* Footer text */
 .login-footer-text {
@@ -465,27 +390,4 @@
     font-size: 0.82rem;
   }
 
-  .login-quick-btn {
-    font-size: 0.76rem;
-    padding: 8px 10px;
-  }
-
-  .login-hint {
-    padding: 12px;
-  }
-
-  .login-hint-row {
-    font-size: 0.75rem;
-    gap: 6px;
-  }
-}
-
-@media (max-width: 380px) {
-  .login-quick-row {
-    flex-direction: column;
-    gap: 6px;
-  }
-  .login-quick-btn {
-    width: 100%;
-  }
 }

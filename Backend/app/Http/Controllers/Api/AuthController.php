@@ -162,6 +162,17 @@ class AuthController extends Controller
             $user->facultyMember->update($facultyData);
         }
 
+        if ($request->hasFile('photo')) {
+            $request->validate([
+                'photo' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            ]);
+            if ($user->profile_photo) {
+                Storage::disk('public')->delete($user->profile_photo);
+            }
+            $path = $request->file('photo')->store('profile-photos', 'public');
+            $user->update(['profile_photo' => $path]);
+        }
+
         return response()->json([
             'message' => 'Profile updated successfully.',
             'data'    => $user->fresh()->load('facultyMember'),
@@ -174,7 +185,7 @@ class AuthController extends Controller
     public function uploadPhoto(Request $request): JsonResponse
     {
         $request->validate([
-            'photo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'photo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ]);
 
         $user = $request->user();

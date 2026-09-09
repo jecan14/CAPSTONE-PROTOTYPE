@@ -1,7 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import StatCard from './StatCard';
 import { animatePageEntrance, animateStatCards } from '../utils/animations';
-import { fetchFacultyDashboard } from '../api';
+import { fetchFacultyDashboard, fetchFacultyPayments, resolvePhotoUrl } from '../api';
+
+const parseAmountNumber = (val) => {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+const formatCurrency = (val) => '₱ ' + Number(parseAmountNumber(val)).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const getInitials = (nameStr, fallback = 'FM') => {
   if (!nameStr || typeof nameStr !== 'string') return fallback;
@@ -21,13 +31,22 @@ export default function FacultyHome({ currentUser, onNavigate }) {
   const panelsRef = useRef(null);
 
   const [dashboardData, setDashboardData] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetchFacultyDashboard();
-        setDashboardData(res);
+        const [dashRes, payRes] = await Promise.all([
+          fetchFacultyDashboard().catch(() => null),
+          fetchFacultyPayments().catch(() => null)
+        ]);
+        if (dashRes) setDashboardData(dashRes);
+
+        const localPayments = JSON.parse(localStorage.getItem('ucare_submitted_payments') || '[]');
+        const apiPayments = payRes?.data || [];
+        const combined = [...localPayments, ...apiPayments];
+        setPayments(combined);
       } catch (err) {
         console.error("Failed to load faculty dashboard data", err);
       } finally {
@@ -46,23 +65,27 @@ export default function FacultyHome({ currentUser, onNavigate }) {
     }
   }, [loading]);
 
-  // Provide robust fallbacks so UI never crashes or renders blank
-  const totalContributions = dashboardData?.total_contributions || 28500;
-  const activeRequestsCount = dashboardData?.active_requests || 1;
+  // Provide robust calculations matching Payment History stat cards
+  const totalPaid = dashboardData?.total_contributions != null ? dashboardData.total_contributions : 0;
 
-  const recentRequests = (dashboardData?.recent_requests && Array.isArray(dashboardData.recent_requests) && dashboardData.recent_requests.length > 0)
-    ? dashboardData.recent_requests
-    : [
-        { id: 1, type: 'Medical Assistance', date: 'Jul 26, 2026', amount: '₱ 15,000.00', status: 'Pending' },
-        { id: 2, type: 'Educational Aid', date: 'May 12, 2026', amount: '₱ 8,500.00', status: 'Approved' }
-      ];
+  const pendingAmount = payments
+    .filter(p => p.status !== 'Verified' && p.status !== 'Completed')
+    .reduce((sum, p) => sum + parseAmountNumber(p.amount), 0);
 
-  const recentPayments = (dashboardData?.recent_payments && Array.isArray(dashboardData.recent_payments) && dashboardData.recent_payments.length > 0)
-    ? dashboardData.recent_payments
-    : [
-        { id: 101, type: 'Monthly Contribution', date: 'Jul 15, 2026', refNo: 'REF-2026-094', amount: '₱ 500.00', status: 'Verified' },
-        { id: 102, type: 'Special Assessment', date: 'Jun 10, 2026', refNo: 'REF-2026-088', amount: '₱ 300.00', status: 'Verified' }
-      ];
+  const pendingCount = payments.filter(p => p.status !== 'Verified' && p.status !== 'Completed').length;
+
+  const recentRequests = Array.isArray(dashboardData?.recent_requests) ? dashboardData.recent_requests : [];
+
+  const recentPayments = (payments.length > 0)
+    ? payments.slice(0, 3).map(p => ({
+        id: p.id,
+        type: p.type || p.payment_method || 'Monthly Dues',
+        date: p.payment_date || p.date || 'Recent',
+        refNo: p.refNo || p.reference_no || `PAY-${p.id}`,
+        amount: typeof p.amount === 'number' ? formatCurrency(p.amount) : (String(p.amount).includes('₱') ? p.amount : formatCurrency(parseAmountNumber(p.amount))),
+        status: p.status
+      }))
+    : (Array.isArray(dashboardData?.recent_payments) ? dashboardData.recent_payments : []);
   
   const chartLabels = (dashboardData?.chart_labels && Array.isArray(dashboardData.chart_labels) && dashboardData.chart_labels.length > 0)
     ? dashboardData.chart_labels
@@ -70,19 +93,7 @@ export default function FacultyHome({ currentUser, onNavigate }) {
 
   const contributionsChart = (dashboardData?.contributions_chart && Array.isArray(dashboardData.contributions_chart) && dashboardData.contributions_chart.length > 0)
     ? dashboardData.contributions_chart
-    : [4000, 4500, 5000, 4800, 5200, 5000];
-
-  const requestsChart = (dashboardData?.requests_chart && Array.isArray(dashboardData.requests_chart) && dashboardData.requests_chart.length > 0)
-    ? dashboardData.requests_chart
-    : [1, 0, 2, 1, 0, 1];
-
-  const formatCurrency = (val) => '₱ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
-
-  const resolvePhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-    return `/storage/${photo.replace(/^\/+/, '')}`;
-  };
+    : [0, 0, 0, 0, 0, 0];
 
   const photoUrl = resolvePhotoUrl(user.profile_photo_url || user.profile_photo);
   const [photoError, setPhotoError] = useState(false);
@@ -131,24 +142,28 @@ export default function FacultyHome({ currentUser, onNavigate }) {
         </div>
       </div>
 
-      {/* Summary Cards Row */}
+      {/* Summary Cards Row - Matches Payment History */}
       <div className="top-panels-grid top-panels-grid--two-col" ref={panelsRef}>
         <StatCard
-          headerTitle="TOTAL CONTRIBUTIONS (VERIFIED)"
-          value={loading ? '...' : formatCurrency(totalContributions)}
-          subtitle="Your total union dues remitted to date (only verified payments)"
+          headerTitle="TOTAL PAID"
+          value={loading ? '...' : formatCurrency(totalPaid)}
+          subtitle="All-time verified union payments"
+          trendText="Verified"
+          trendPositive={true}
           chartType="bar"
           data={contributionsChart}
           labels={chartLabels}
         />
 
         <StatCard
-          headerTitle="ACTIVE REQUESTS"
-          value={loading ? '...' : `${activeRequestsCount} Pending`}
-          subtitle="Assistance applications currently under review"
+          headerTitle="TO BE VERIFIED"
+          value={loading ? '...' : formatCurrency(pendingAmount)}
+          subtitle="Recent payment remittance awaiting admin verification"
+          trendText={`${pendingCount} Pending`}
+          trendPositive={pendingCount === 0}
           chartType="area"
           isMainFocus={true}
-          data={requestsChart}
+          data={contributionsChart}
           labels={chartLabels}
         />
       </div>
